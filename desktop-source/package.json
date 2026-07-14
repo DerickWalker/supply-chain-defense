@@ -1,0 +1,39 @@
+{
+  "name": "supply-chain-defense",
+  "version": "1.0.0",
+  "description": "공급망 공격 대 방어를 체험하는 교육용 게임 (해커 vs 보안팀)",
+  "main": "main.js",
+  "author": "",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win portable",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "electron": "^31.3.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.example.supplychaindefense",
+    "productName": "공급망 디펜스",
+    "files": [
+      "main.js",
+      "game.html"
+    ],
+    "win": {
+      "target": [
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Game"
+    }
+  }
+}

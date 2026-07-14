@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공급망 디펜스 — RED VS BLUE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; }
+  }
+  :root{
+    --bg-void:#0a0e17;
+    --panel:#131a2b;
+    --panel-edge:#2a3655;
+    --red:#ff3860;
+    --red-dim:#5c1226;
+    --blue:#2ee6d6;
+    --blue-dim:#0d4a47;
+    --amber:#ffcc4d;
+    --text:#e8f0ff;
+    --text-dim:#8592b4;
+    --font-pixel:'Press Start 2P', monospace;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  button{ font-family:inherit; appearance:none; -webkit-appearance:none; }
+  body{
+    background:var(--bg-void);
+    color:var(--text);
+    font-family:var(--font-mono);
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:16px;
+    position:relative;
+    overflow-x:hidden;
+  }
+  #scanlines{
+    pointer-events:none;
+    position:fixed;
+    inset:0;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(255,255,255,0.035) 0px,
+      rgba(255,255,255,0.035) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    z-index:50;
+    mix-blend-mode:overlay;
+  }
+  @media (prefers-reduced-motion: no-preference){
+    #scanlines{ animation:flicker 6s infinite; }
+  }
+  @keyframes flicker{
+    0%,96%,100%{ opacity:1; }
+    97%{ opacity:.85; }
+    98%{ opacity:1; }
+  }
+  #cabinet{
+    width:100%;
+    max-width:640px;
+    border:4px solid var(--panel-edge);
+    border-radius:4px;
+    background:linear-gradient(180deg, #101627, #0a0e17);
+    box-shadow: 0 0 0 2px #000, 0 20px 60px rgba(0,0,0,.6), inset 0 0 40px rgba(46,230,214,.04);
+    overflow:hidden;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border-bottom:3px solid var(--panel-edge);
+    background:#0d1220;
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  .topbar-center{
+    flex:1 1 auto;
+    min-width:0;
+    text-align:center;
+    font-family:var(--font-pixel);
+    font-size:9px;
+    letter-spacing:1px;
+    color:var(--amber);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .nav-btn{
+    flex:0 0 auto;
+    width:30px;
+    height:26px;
+    background:#161d30;
+    border:2px solid var(--panel-edge);
+    color:var(--text-dim);
+    font-size:12px;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    padding:0;
+  }
+  .nav-btn:hover:not(:disabled){ border-color:var(--amber); color:var(--amber); }
+  .nav-btn:disabled{ opacity:.3; cursor:default; }
+  #screen{ padding:20px 16px 24px; min-height:420px; }
+  .pixel-title{
+    font-family:var(--font-pixel);
+    font-size:clamp(16px, 6vw, 26px);
+    line-height:1.5;
+    color:var(--text);
+    text-shadow: 3px 3px 0 var(--red-dim), -1px -1px 0 var(--blue-dim);
+    margin:6px 0 4px;
+    text-align:center;
+  }
+  .subtitle{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:3px;
+    color:var(--text-dim);
+    text-align:center;
+    text-transform:uppercase;
+    margin-bottom:22px;
+  }
+  .lead{
+    font-size:13px;
+    line-height:1.7;
+    color:var(--text-dim);
+    text-align:center;
+    max-width:440px;
+    margin:0 auto 24px;
+  }
+  .btn{
+    display:block;
+    width:100%;
+    font-family:var(--font-pixel);
+    font-size:11px;
+    letter-spacing:1px;
+    color:var(--bg-void);
+    background:var(--amber);
+    border:none;
+    border-bottom:4px solid #b8860b;
+    padding:14px 10px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .btn:active{ transform:translateY(3px); border-bottom-width:1px; }
+  .btn.ghost{
+    background:transparent;
+    color:var(--text-dim);
+    border:2px solid var(--panel-edge);
+    font-size:9px;
+    padding:10px;
+  }
+  button:focus-visible, .role-card:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+  .role-grid{ display:grid; grid-template-columns:1fr; gap:14px; margin-bottom:6px; }
+  @media (min-width:480px){ .role-grid{ grid-template-columns:1fr 1fr; } }
+  .role-card{
+    width:100%;
+    border:3px solid var(--panel-edge);
+    background:var(--panel);
+    padding:16px 14px;
+    cursor:pointer;
+    text-align:center;
+    color:var(--text);
+  }
+  .role-card.red{ border-color:var(--red-dim); }
+  .role-card.red:hover{ border-color:var(--red); box-shadow:0 0 0 2px var(--red) inset; }
+  .role-card.blue{ border-color:var(--blue-dim); }
+  .role-card.blue:hover{ border-color:var(--blue); box-shadow:0 0 0 2px var(--blue) inset; }
+  .role-card h3{ font-family:var(--font-pixel); font-size:13px; margin:10px 0 8px; }
+  .role-card.red h3{ color:var(--red); }
+  .role-card.blue h3{ color:var(--blue); }
+  .role-card p{ font-size:11px; color:var(--text-dim); line-height:1.6; margin:0; }
+  canvas.sprite{ image-rendering:pixelated; display:block; margin:0 auto; }
+  .case-box{
+    border-left:3px solid var(--amber);
+    background:var(--panel);
+    padding:12px 14px;
+    font-size:12px;
+    line-height:1.7;
+    color:var(--text-dim);
+    margin:16px 0 22px;
+  }
+  .case-box b{ color:var(--amber); font-family:var(--font-mono); }
+  .battle-top{ display:flex; justify-content:space-between; align-items:flex-end; gap:10px; margin-bottom:16px; }
+  .fighter{ flex:1; text-align:center; }
+  .fighter .label{ font-family:var(--font-pixel); font-size:9px; margin-top:6px; }
+  .fighter.red .label{ color:var(--red); }
+  .fighter.blue .label{ color:var(--blue); }
+  .fighter.hit{ animation:hitflash .3s ease; }
+  @keyframes hitflash{ 0%{ filter:brightness(2.2); } 100%{ filter:brightness(1); } }
+  .vs{ font-family:var(--font-pixel); font-size:14px; color:var(--text-dim); padding-bottom:20px; }
+  .meter-row{ margin-bottom:6px; }
+  .meter-label{ display:flex; justify-content:space-between; font-size:10px; color:var(--text-dim); margin-bottom:3px; }
+  .meter{ height:14px; background:#050810; border:2px solid var(--panel-edge); }
+  .meter-fill{ height:100%; transition:width .4s ease; }
+  .meter-fill.red{ background:linear-gradient(90deg, var(--red-dim), var(--red)); }
+  .meter-fill.blue{ background:linear-gradient(90deg, var(--blue-dim), var(--blue)); }
+  .round-tag{ text-align:center; font-family:var(--font-pixel); font-size:10px; color:var(--amber); margin:18px 0 10px; }
+  .prompt{ text-align:center; font-size:11px; color:var(--text-dim); margin-bottom:10px; }
+  .moves{ display:grid; gap:10px; margin-bottom:16px; }
+  .move-card{
+    border:2px solid var(--panel-edge);
+    background:var(--panel);
+    padding:10px 12px;
+    text-align:left;
+    cursor:pointer;
+    color:var(--text);
+    font-family:var(--font-mono);
+    width:100%;
+  }
+  .move-card:hover:not(:disabled){ border-color:var(--amber); }
+  .move-card:disabled{ opacity:.4; cursor:default; }
+  .move-card .mv-name{ font-size:12px; font-weight:600; margin-bottom:3px; }
+  .move-card .mv-desc{ font-size:10.5px; color:var(--text-dim); line-height:1.5; }
+  .move-card .mv-code{
+    font-family:var(--font-mono);
+    font-size:10px;
+    color:var(--blue);
+    background:#000;
+    border:1px solid var(--panel-edge);
+    padding:5px 7px;
+    margin-top:7px;
+    overflow-x:auto;
+    white-space:pre;
+  }
+  .rt-indicator{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    justify-content:center;
+    font-size:10.5px;
+    color:var(--amber);
+    margin:16px 0 12px;
+  }
+  .rt-dot{
+    width:8px; height:8px;
+    border-radius:50%;
+    background:var(--red);
+    flex:0 0 auto;
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .rt-dot{ animation:rtpulse 1.1s ease-in-out infinite; }
+  }
+  @keyframes rtpulse{
+    0%,100%{ opacity:1; transform:scale(1); }
+    50%{ opacity:.4; transform:scale(1.3); }
+  }
+  .log{
+    border:2px solid var(--panel-edge);
+    background:#050810;
+    height:150px;
+    overflow-y:auto;
+    padding:10px 12px;
+    font-size:11px;
+    line-height:1.8;
+    color:var(--text-dim);
+  }
+  .log .tip{ color:var(--amber); }
+  .log .win{ color:var(--blue); }
+  .log .lose{ color:var(--red); }
+  .result-banner{ font-family:var(--font-pixel); text-align:center; font-size:clamp(14px,5vw,20px); margin:10px 0 18px; }
+  .result-banner.win{ color:var(--blue); text-shadow:2px 2px 0 var(--blue-dim); }
+  .result-banner.lose{ color:var(--red); text-shadow:2px 2px 0 var(--red-dim); }
+  .tally{ display:flex; justify-content:center; gap:26px; margin:18px 0; font-family:var(--font-pixel); font-size:12px; text-align:center; }
+  .tally .n{ font-size:22px; display:block; margin-bottom:6px; }
+  .btn-row{ display:grid; gap:10px; margin-top:6px; }
+  .stat-row{ display:flex; justify-content:center; gap:22px; margin:16px 0 20px; font-family:var(--font-pixel); font-size:10px; text-align:center; }
+  .stat-row .n{ font-size:17px; display:block; margin-bottom:6px; color:var(--amber); }
+  .input-row{ margin-bottom:12px; }
+  .text-input{
+    width:100%;
+    background:#050810;
+    border:2px solid var(--panel-edge);
+    color:var(--text);
+    font-family:var(--font-mono);
+    font-size:13px;
+    padding:10px 12px;
+  }
+  .text-input:focus{ outline:none; border-color:var(--amber); }
+  .lb-msg{ text-align:center; font-size:11px; margin:10px 0 4px; }
+  .lb-msg.ok{ color:var(--blue); }
+  .lb-msg.err{ color:var(--red); }
+  .lb-list{ border:2px solid var(--panel-edge); background:#050810; max-height:340px; overflow-y:auto; }
+  .lb-row{ display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--panel-edge); font-size:11px; }
+  .lb-row:last-child{ border-bottom:none; }
+  .lb-rank{ font-family:var(--font-pixel); font-size:10px; color:var(--text-dim); width:26px; flex:0 0 auto; }
+  .lb-row:nth-child(1) .lb-rank{ color:var(--amber); }
+  .lb-nick{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-role-tag{ font-size:8.5px; padding:2px 5px; border:1px solid; flex:0 0 auto; font-family:var(--font-mono); }
+  .lb-role-tag.red{ color:var(--red); border-color:var(--red-dim); }
+  .lb-role-tag.blue{ color:var(--blue); border-color:var(--blue-dim); }
+  .lb-score{ font-family:var(--font-pixel); font-size:10px; color:var(--text); width:52px; text-align:right; flex:0 0 auto; }
+  .lb-time{ font-size:10px; color:var(--text-dim); width:40px; text-align:right; flex:0 0 auto; }
+  .lb-empty{ text-align:center; padding:26px 10px; font-size:12px; color:var(--text-dim); }
+  .cmd-panel{ border:2px solid var(--panel-edge); background:#050810; padding:14px; margin-bottom:14px; }
+  .cmd-prompt{ font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.6; }
+  .cmd-line{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:5px;
+    background:#000;
+    border:1px solid var(--panel-edge);
+    padding:9px 10px;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--blue);
+    margin-bottom:8px;
+  }
+  .cmd-line::before{ content:'$'; color:var(--amber); }
+  .cmd-tmpl{ white-space:pre-wrap; word-break:break-all; }
+  .cmd-input-inline{
+    background:#111a2e;
+    border:1px solid var(--amber);
+    color:var(--amber);
+    font-family:var(--font-mono);
+    font-size:12px;
+    padding:3px 6px;
+    width:170px;
+    max-width:100%;
+  }
+  .cmd-input-inline:focus{ outline:none; }
+  .cmd-feedback{ font-size:11px; margin-bottom:10px; min-height:14px; }
+  .cmd-feedback.err{ color:var(--red); }
+  .cmd-feedback.ok{ color:var(--blue); }
+  .study-section{ margin-bottom:20px; }
+  .study-h{ font-family:var(--font-pixel); font-size:11px; color:var(--amber); margin-bottom:10px; letter-spacing:.5px; }
+  .study-body{ font-size:12.5px; line-height:1.85; color:var(--text); white-space:pre-line; }
+  .code-block{ margin:10px 0 14px; }
+  .code-label{ font-size:10.5px; color:var(--text-dim); margin-bottom:5px; }
+  .code-block pre{
+    background:#000;
+    border:1px solid var(--panel-edge);
+    border-left:3px solid var(--blue);
+    padding:10px 12px;
+    overflow-x:auto;
+    font-family:var(--font-mono);
+    font-size:11px;
+    line-height:1.6;
+    color:#8fd6ff;
+    margin:0;
+    white-space:pre;
+  }
+  .code-block.vuln pre{ border-left-color:var(--red); color:#ffb3c1; }
+  .study-list-item{
+    display:block;
+    width:100%;
+    text-align:left;
+    border:2px solid var(--panel-edge);
+    background:var(--panel);
+    padding:14px;
+    margin-bottom:10px;
+    color:var(--text);
+  }
+  .study-list-item:hover{ border-color:var(--amber); }
+  .study-list-item .sl-code{ font-family:var(--font-pixel); font-size:8px; color:var(--text-dim); margin-bottom:6px; }
+  .study-list-item .sl-name{ font-size:13px; font-weight:600; }
+</style>
+</head>
+<body>
+  <div id="scanlines"></div>
+  <div id="cabinet">
+    <div class="topbar">
+      <button class="nav-btn" id="backBtn" aria-label="뒤로가기" title="뒤로가기">◀</button>
+      <span class="topbar-center" id="topbarCenter">SUPPLY_CHAIN.exe</span>
+      <button class="nav-btn" id="homeBtn" aria-label="홈으로" title="홈으로">⌂</button>
+    </div>
+    <div id="screen"></div>
+  </div>
+
+<script>
+// ---------- DATA: 4 stages, each grounded in a real supply-chain attack pattern ----------
+const STAGES = [
+  {
+    name:'의존성 오염',
+    code:'OP.TYPOSQUAT',
+    caseNote:'공개 패키지 저장소(PyPI, npm 등)에 이름이 비슷하거나 위장된 악성 패키지가 등록되어 무심코 설치되는 유형의 공격이 실제로 매년 급증하고 있다.',
+    tip:'SBOM(소프트웨어 구성명세서)으로 실제 사용 중인 패키지 출처를 목록화해두면 낯선 패키지 유입을 빠르게 알아챌 수 있다.',
+    attacks:[
+      {id:'typo', name:'타이포스쿼팅 패키지', desc:'인기 패키지와 이름이 한 글자 다른 악성 패키지를 등록해 오타를 유도한다.', cmd:{prompt:'패키지를 공개 저장소에 배포하는 명령어를 완성하세요.', tmpl:'npm ____ --access public', ans:['publish']}},
+      {id:'confusion', name:'의존성 컨퓨전', desc:'내부 전용 패키지명을 공개 저장소에 먼저 등록해 빌드 시 악성 버전이 받아지게 한다.', cmd:{prompt:'레지스트리에 동일한 이름의 패키지가 이미 있는지 조회하는 명령어를 완성하세요.', tmpl:'npm ____ <package-name>', ans:['view','info']}},
+      {id:'takeover', name:'계정 탈취 후 배포', desc:'정상 유지관리자 계정을 탈취해 악성 업데이트를 정식 채널로 배포한다.', cmd:{prompt:'탈취한 계정으로 배포할 때 필요한 1회용 인증코드(OTP) 플래그를 완성하세요.', tmpl:'npm publish ____ 123456', ans:['--otp']}},
+    ],
+    defenses:[
+      {id:'sbom', name:'SBOM 의존성 감사', desc:'사용 중인 모든 구성요소와 출처를 목록화해 낯선 패키지를 식별한다.', cmd:{prompt:'프로젝트의 SBOM(소프트웨어 구성명세서)을 생성하는 명령어를 완성하세요.', tmpl:'____ scan dir:. -o cyclonedx-json', ans:['syft']}},
+      {id:'pin', name:'버전 고정 + 지연 검증', desc:'신규 릴리스를 즉시 반영하지 않고 일정 기간 관찰 후 적용한다.', cmd:{prompt:'정확한 버전으로 고정 설치하는 npm 플래그를 완성하세요.', tmpl:'npm install express@4.18.2 ____', ans:['--save-exact']}},
+      {id:'monitor', name:'이상행위 모니터링', desc:'계정 로그인과 배포 패턴의 이상 징후를 탐지한다.', cmd:{prompt:'설치된 패키지의 알려진 취약점을 점검하는 명령어를 완성하세요.', tmpl:'npm ____', ans:['audit']}},
+    ],
+    matchup:{
+      typo:{sbom:.85, pin:.30, monitor:.40},
+      confusion:{sbom:.80, pin:.35, monitor:.30},
+      takeover:{sbom:.25, pin:.50, monitor:.85},
+    },
+    study:{
+      caseTitle:'실전 사례: Dependency Confusion (2021)',
+      caseBody:'2021년 2월, 보안 연구자 Alex Birsan은 Dependency Confusion(의존성 컨퓨전)이라는 새로운 공급망 공격 기법을 공개했다. 그는 GitHub 공개 저장소의 소스코드, npm 에러 메시지, 채용 공고, 기업 블로그 등에 흘러나온 사내 전용(private) 패키지 이름들을 수집한 뒤, 같은 이름으로 공개 레지스트리(npm, PyPI, RubyGems)에 훨씬 높은 버전 번호(예: 9.9.9)로 패키지를 등록했다.\n\n많은 기업의 빌드 시스템은 사내 레지스트리와 공개 레지스트리를 동시에 참조하면서 버전이 더 높은 쪽을 우선 설치하도록 설정되어 있었다. 그 결과 Birsan이 등록한 가짜 패키지가 사내 패키지보다 먼저 설치·실행되었고, Apple, Microsoft, PayPal, Tesla, Uber, Shopify 등 35개 이상 조직의 내부망에서 코드가 실행되는 것이 확인됐다. Shopify와 Apple은 각각 3만 달러의 버그바운티를 지급했고, 전체 포상금은 13만 달러를 넘었다. 그가 배포한 코드는 실행 여부만 외부로 알리는 무해한 신호였지만, 같은 취약점은 얼마든지 실제 악성코드로 악용될 수 있었다.',
+      mechanism:'핵심 원인은 패키지 매니저가 어느 레지스트리를 신뢰할지 명시적으로 지정하지 않고 버전 번호만으로 우선순위를 판단한다는 데 있다. 공격자는 (1) 유출된 사내 패키지명을 수집하고, (2) 동일한 이름으로 더 높은 버전을 공개 레지스트리에 등록한 뒤, (3) 피해 조직의 빌드·CI 파이프라인이 자동으로 그 패키지를 내려받아 실행하기를 기다리기만 하면 된다. 별도의 인증 우회나 코드 취약점 없이도 성립한다는 점이 특히 위협적이다.',
+      vulnPattern:{label:'취약한 설정 예시 — 프라이빗 스코프 미지정', code:'# .npmrc — 위험한 설정\nregistry=https://registry.npmjs.org/\n# @mycompany 스코프 패키지가 어느 레지스트리에서 와야 하는지\n# 명시하지 않으면, 공개 레지스트리에 동일 이름의 더 높은 버전이\n# 등록되어 있을 경우 그쪽이 설치될 수 있다.'},
+      defenses:[
+        {label:'안전한 설정 — 스코프별 레지스트리 명시', code:'# .npmrc — 안전한 설정\n@mycompany:registry=https://npm.mycompany.internal/\nregistry=https://registry.npmjs.org/'},
+        {label:'타이포스쿼팅 탐지 스크립트 (Python)', code:'import difflib\n\nPOPULAR = ["express", "react", "lodash", "axios", "request"]\n\ndef check_typosquat(pkg_name, threshold=0.85):\n    for name in POPULAR:\n        ratio = difflib.SequenceMatcher(None, pkg_name, name).ratio()\n        if pkg_name != name and ratio >= threshold:\n            print("[!]", pkg_name, "looks similar to", name)\n\ncheck_typosquat("expres")'},
+      ]
+    }
+  },
+  {
+    name:'메인테이너 신뢰 탈취',
+    code:'OP.BACKDOOR',
+    caseNote:'오픈소스 프로젝트에 오랜 기간 정상적으로 기여하며 신뢰를 쌓은 뒤 관리 권한을 얻어 백도어를 심는 방식의 공급망 공격이 실제로 보고된 바 있다.',
+    tip:'단독 승인만으로 병합되는 구조는 위험하다 — 다중 리뷰어 승인 체계가 이런 유형의 공격에 특히 효과적이다.',
+    attacks:[
+      {id:'trust', name:'장기 신뢰 축적 후 백도어 PR', desc:'수년간 정상 기여를 이어가며 신뢰를 쌓은 뒤 교묘한 풀리퀘스트에 백도어를 숨긴다.', cmd:{prompt:'풀리퀘스트를 새로 여는 GitHub CLI 명령어를 완성하세요.', tmpl:'gh pr ____ --title "fix: minor cleanup"', ans:['create']}},
+      {id:'obfuscate', name:'난독화 커밋', desc:'코드리뷰를 통과하도록 악성 로직을 정상 코드처럼 위장한다.', cmd:{prompt:'직전 커밋 내용을 수정해 흔적을 남기지 않는 git 플래그를 완성하세요.', tmpl:'git commit ____', ans:['--amend']}},
+      {id:'social', name:'권한 승계 소셜엔지니어링', desc:'메인테이너가 지쳤다는 점을 노려 권한 이양을 요청해 관리자 지위를 얻는다.', cmd:{prompt:'저장소 협업자 권한 목록을 조회하는 GitHub API 경로를 완성하세요.', tmpl:'gh api repos/:owner/:repo/____', ans:['collaborators']}},
+    ],
+    defenses:[
+      {id:'multireview', name:'다중 리뷰어 승인', desc:'중요 변경은 반드시 2인 이상 승인을 거치도록 한다.', cmd:{prompt:'브랜치 보호 설정을 조회하는 GitHub API 경로를 완성하세요.', tmpl:'gh api repos/:owner/:repo/branches/main/____', ans:['protection']}},
+      {id:'staticanalysis', name:'정적분석 자동화', desc:'커밋마다 자동으로 의심스러운 패턴과 난독화 여부를 스캔한다.', cmd:{prompt:'정적분석 스캐너를 실행하는 명령어를 완성하세요.', tmpl:'____ --config=auto .', ans:['semgrep']}},
+      {id:'permaudit', name:'권한 변경 이력 감사', desc:'관리자 권한 부여·이양 내역을 정기적으로 점검한다.', cmd:{prompt:'조직의 감사 로그를 조회하는 GitHub API 경로를 완성하세요.', tmpl:'gh api orgs/:org/____', ans:['audit-log']}},
+    ],
+    matchup:{
+      trust:{multireview:.80, staticanalysis:.35, permaudit:.30},
+      obfuscate:{multireview:.40, staticanalysis:.85, permaudit:.20},
+      social:{multireview:.30, staticanalysis:.20, permaudit:.85},
+    },
+    study:{
+      caseTitle:'실전 사례: XZ Utils 백도어 (2024, CVE-2024-3094)',
+      caseBody:'2024년 3월 29일, 마이크로소프트 엔지니어 Andres Freund는 우분투 개발판에서 SSH 로그인이 평소보다 조금 느려진 것을 우연히 발견했다. 원인을 추적한 그는 널리 쓰이는 압축 라이브러리 XZ Utils(liblzma)의 최신 버전(5.6.0~5.6.1)에 정교한 백도어가 심어져 있다는 사실을 밝혀냈다. 특정 개인키를 가진 공격자가 SSH 인증을 우회해 원격 코드를 실행할 수 있는 이 백도어는 CVSS 최고 점수인 10.0을 받았다 (CVE-2024-3094).\n\n백도어를 심은 것은 2021~2022년경부터 Jia Tan이라는 이름으로 활동을 시작한 인물(혹은 조직)이었다. 이 계정은 2년 가까이 사소한 버그 수정과 기여를 꾸준히 이어가며 프로젝트의 신뢰를 얻었고, 다른 익명 계정들을 동원해 기존 관리자를 압박하는 방식으로 결국 공동 관리자 권한을 얻어냈다. 백도어 코드는 GitHub 저장소 자체가 아니라 릴리스 시에만 배포되는 압축파일 안의 바이너리 테스트 파일에 몰래 추가되어 있어, 일반적인 코드 리뷰로는 발견하기 어려웠다. Freund가 우연히 성능 이상을 알아채지 못했다면 이 백도어는 전 세계 수많은 리눅스 서버에 그대로 배포될 뻔했다.',
+      mechanism:'이 공격의 핵심은 코드 자체의 취약점이 아니라 신뢰를 장기간에 걸쳐 조작했다는 점이다. 오랜 기간 정상적인 기여로 평판을 쌓고, 다중 계정을 이용한 사회공학으로 기존 관리자에게 권한 이양 압박을 가하고, 관리자 권한을 얻은 뒤에는 소스 저장소가 아닌 배포 산출물(릴리스 tarball)에만 악성 코드를 추가해 코드 리뷰를 우회한다. 오픈소스 프로젝트의 신뢰 모델 자체를 공격 표면으로 삼는다는 점에서 기술적 방어만으로는 완전히 막기 어렵다.',
+      vulnPattern:{label:'위험 신호 — 저장소와 배포물의 불일치', code:'# 소스 저장소에는 없는 파일이 릴리스 tarball에만 존재하는지 확인\n$ git diff v5.6.0 --stat\n(저장소 기준 변경 없음)\n\n$ diff <(git archive v5.6.0) release-5.6.0.tar.gz\n(릴리스 파일에만 존재하는 바이너리 테스트 파일 발견)'},
+      defenses:[
+        {label:'다중 승인 브랜치 보호 (GitHub CLI)', code:'gh api -X PUT repos/:owner/:repo/branches/main/protection \\\n  -f required_pull_request_reviews[required_approving_review_count]=2 \\\n  -f required_pull_request_reviews[require_code_owner_reviews]=true'},
+        {label:'릴리스 산출물 재현성 검증', code:'# 소스에서 직접 빌드한 결과와 배포된 릴리스의 해시를 비교\nsha256sum release-5.6.1.tar.gz\n\ngit checkout v5.6.1\n./build.sh\nsha256sum dist/output.tar.gz\n\n# 두 해시가 다르면 배포물에 저장소에 없는 내용이 섞여 있다는 뜻'},
+      ]
+    }
+  },
+  {
+    name:'CI/CD 연쇄 침투',
+    code:'OP.CHAIN_SCAN',
+    caseNote:'2026년 3월, CI/CD 파이프라인에서 널리 쓰이던 보안 스캐너 도구가 먼저 침해된 뒤, 이를 자동으로 신뢰해 최신 버전을 그대로 받아쓰던 AI 라이브러리까지 연쇄적으로 공급망 공격을 당한 사례가 있었다.',
+    tip:'보안 도구조차 하나의 의존성이다 — 버전을 고정하지 않고 자동으로 최신화하면 도구 자체가 침투 경로가 될 수 있다.',
+    attacks:[
+      {id:'workflow', name:'CI 워크플로우 취약점 익스플로잇', desc:'CI 워크플로우 설정의 허점을 악용해 조직의 액세스 토큰을 탈취한다.', cmd:{prompt:'포크에서 온 PR에도 상위 저장소 시크릿 권한이 그대로 부여되어 악용되는 GitHub Actions 트리거 이름을 입력하세요.', tmpl:'on: ____', ans:['pull_request_target']}},
+      {id:'token', name:'배포 토큰 탈취', desc:'탈취한 권한으로 패키지 배포용 토큰을 확보해 악성 버전을 정식 채널로 올린다.', cmd:{prompt:'GitHub Actions에서 시크릿 값을 참조하는 컨텍스트 이름을 완성하세요.', tmpl:'${{ ____.MY_TOKEN }}', ans:['secrets']}},
+      {id:'cache', name:'빌드 캐시 오염', desc:'빌드 캐시나 중간 산출물에 악성 코드를 몰래 끼워 넣는다.', cmd:{prompt:'actions/cache에서 캐시를 구분하는 설정 항목 이름을 완성하세요.', tmpl:"____: npm-${{ hashFiles('package-lock.json') }}", ans:['key']}},
+    ],
+    defenses:[
+      {id:'toolpin', name:'CI 도구 버전 고정', desc:'보안 스캐너를 포함한 CI 도구를 자동 최신화하지 않고 검증된 버전에 고정한다.', cmd:{prompt:'가변 태그(@v4) 대신 고정된 커밋 해시로 액션을 참조할 때 태그명 앞에 쓰는 구분자를 입력하세요.', tmpl:'uses: owner/repo____<commit-sha>', ans:['@']}},
+      {id:'leasttoken', name:'배포 토큰 최소권한', desc:'배포 토큰을 짧은 유효기간과 최소 권한으로만 발급한다.', cmd:{prompt:'워크플로우에 읽기 전용 등 최소 권한만 부여하는 설정 키를 완성하세요.', tmpl:'____: {contents: read}', ans:['permissions']}},
+      {id:'hashverify', name:'빌드 산출물 해시 검증', desc:'빌드 결과물의 해시를 교차 검증해 변조 여부를 확인한다.', cmd:{prompt:'파일의 SHA-256 해시를 검증하는 명령어를 완성하세요.', tmpl:'____ -c checksums.txt', ans:['sha256sum']}},
+    ],
+    matchup:{
+      workflow:{toolpin:.85, leasttoken:.30, hashverify:.30},
+      token:{toolpin:.30, leasttoken:.85, hashverify:.25},
+      cache:{toolpin:.35, leasttoken:.25, hashverify:.80},
+    },
+    study:{
+      caseTitle:'실전 사례: LiteLLM 공급망 공격 (2026.3)',
+      caseBody:'2026년 3월, AI 에이전트·LLM 오케스트레이션 도구들이 표준처럼 쓰는 Python 라이브러리 LiteLLM(PyPI 기준 일일 약 340만 건, 월 약 9,700만 건 다운로드)의 v1.82.7~v1.82.8 버전에 자격증명 탈취형 악성코드가 삽입되어 배포됐다.\n\n발단은 LiteLLM이 아니라 CI/CD 파이프라인에서 흔히 쓰이는 컨테이너 보안 스캐너 Trivy였다. 공격 조직(TeamPCP로 알려짐)은 Trivy 저장소의 GitHub Actions 워크플로우가 pull_request_target 트리거를 사용하면서도 포크된 PR의 코드를 충분한 검증 없이 체크아웃하는 허점을 악용해 조직의 GitHub 액세스 토큰을 탈취했다. 이후 이 권한으로 Trivy의 GitHub Actions 태그 76개를 통째로 악성 버전으로 바꿔치기했다.\n\n문제는 LiteLLM이 자체 CI/CD 보안 스캔에 Trivy를 쓰면서 버전을 고정하지 않고 항상 최신 태그를 자동으로 받아쓰고 있었다는 점이다. 변조된 Trivy가 LiteLLM의 빌드 파이프라인에서 그대로 실행되며 PyPI 배포 토큰이 공격자에게 넘어갔고, 신뢰받던 보안 스캐너 하나가 뚫린 것이 AI 인프라 표준 라이브러리 전체의 침해로 이어졌다. 악성 버전이 PyPI에 게시된 시간은 약 3시간에 불과했지만, 그 사이에도 상당수 시스템이 감염됐을 것으로 추정된다.',
+      mechanism:'연쇄형 공급망 공격의 전형이다. 보안 도구 자체를 1차 표적으로 삼아 침해한 뒤, 그 도구를 버전 고정 없이 자동으로 신뢰하는 하위 프로젝트를 2차 표적으로 삼는다. 특히 pull_request_target은 포크에서 온 PR도 상위 저장소의 시크릿과 권한을 그대로 쓸 수 있게 만드는 트리거라서, 포크 PR의 코드를 제대로 격리하지 않고 체크아웃·실행하면 외부인이 시크릿에 접근할 길이 열린다.',
+      vulnPattern:{label:'위험한 GitHub Actions 패턴', code:'# 위험: 포크 PR을 pull_request_target으로 받으면서\n# 그 코드를 그대로 체크아웃 + 실행하면 시크릿이 노출될 수 있다\non: pull_request_target\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@v4\n        with:\n          ref: ${{ github.event.pull_request.head.sha }}\n      - run: npm test'},
+      defenses:[
+        {label:'안전한 패턴 — pull_request 사용', code:'on: pull_request\njobs:\n  test:\n    steps:\n      - uses: actions/checkout@v4\n      - run: npm test'},
+        {label:'액션 버전을 커밋 해시로 고정', code:'# 가변 태그(@v4) 대신 고정된 커밋 해시로 참조\n- uses: aquasecurity/trivy-action@6c175e9c40522692f11f6d1b5b3a44c9e4dc7e2'},
+      ]
+    }
+  },
+  {
+    name:'업데이트 채널 하이재킹',
+    code:'OP.CHAIN_REACTION',
+    caseNote:'한 소프트웨어의 정상 업데이트 배포망이 침해되어 악성 버전이 유포됐고, 감염된 조직이 다시 다른 조직을 공격하는 발판이 된 연쇄형 공급망 공격 사례가 실제로 있었다.',
+    tip:'하나의 공급망 공격이 또 다른 공급망 공격의 시작점이 될 수 있다 — 서드파티 침해 여부를 지속적으로 모니터링해야 한다.',
+    attacks:[
+      {id:'signature', name:'정상 서명 도용', desc:'탈취한 서명 키로 악성 인스톨러를 정상 배포처럼 위장한다.', cmd:{prompt:'인증서로 실행 파일에 코드 서명을 입히는 Windows 도구 이름을 입력하세요.', tmpl:'____ sign /f cert.pfx installer.exe', ans:['signtool']}},
+      {id:'distro', name:'배포 서버 침투', desc:'업데이트 배포 서버 자체를 장악해 악성 버전을 심는다.', cmd:{prompt:'원격 서버에 접속하는 기본 명령어를 완성하세요.', tmpl:'____ user@update-server.example.com', ans:['ssh']}},
+      {id:'chainhop', name:'2차 공급망 공격', desc:'이미 감염시킨 조직을 발판 삼아 그 조직의 고객사를 다시 공격한다.', cmd:{prompt:'도메인의 등록 정보를 조회하는 (합법적인) 명령어를 완성하세요.', tmpl:'____ update-server.example.com', ans:['whois']}},
+    ],
+    defenses:[
+      {id:'hashcheck', name:'서명·해시 교차검증', desc:'다운로드한 설치 파일의 서명과 해시를 항상 교차 검증한다.', cmd:{prompt:'설치 파일의 디지털 서명을 검증하는 PowerShell 명령어를 완성하세요.', tmpl:'____ installer.exe', ans:['Get-AuthenticodeSignature']}},
+      {id:'zerotrust', name:'제로 트러스트 접근 통제', desc:'내부 신뢰를 가정하지 않고 모든 접근을 지속적으로 검증한다.', cmd:{prompt:'네트워크 위치와 무관하게 매 요청마다 검증을 요구하는 보안 모델의 영문 명칭을 입력하세요.', tmpl:'security model: ____', ans:['zero trust','zero-trust']}},
+      {id:'thirdparty', name:'서드파티 연쇄침해 모니터링', desc:'협력사·벤더가 공격당했을 가능성을 상시 모니터링한다.', cmd:{prompt:'파일의 SHA-256 해시를 계산하는 명령어를 완성하세요 (macOS/Linux).', tmpl:'____ installer.pkg', ans:['shasum -a 256','sha256sum']}},
+    ],
+    matchup:{
+      signature:{hashcheck:.85, zerotrust:.30, thirdparty:.25},
+      distro:{hashcheck:.30, zerotrust:.80, thirdparty:.30},
+      chainhop:{hashcheck:.25, zerotrust:.40, thirdparty:.85},
+    },
+    study:{
+      caseTitle:'실전 사례: 3CX 공급망 공격 (2023)',
+      caseBody:'2023년 3월, 전 세계 60만 개 이상 기업이 쓰는 업무용 통화 소프트웨어 3CX의 정식 데스크톱 앱이 악성코드에 감염된 채 배포됐다. Mandiant의 조사 결과, 이 사건은 공급망 공격이 또 다른 공급망 공격으로 이어진 최초의 사례로 밝혀졌다.\n\n발단은 2022년, 3CX의 한 직원이 금융 트레이딩 소프트웨어 X_TRADER를 개발사(Trading Technologies) 홈페이지에서 정상적으로 내려받은 것이었다. 그러나 이 설치 파일은 이미 변조되어 있었고 유효한 코드 서명 인증서까지 포함하고 있어 정상 소프트웨어처럼 보였다. 설치 즉시 VEILEDSIGNAL이라는 다단계 백도어가 심어졌고, 공격자는 이 직원의 사내 자격증명을 탈취해 3CX의 빌드 서버까지 접근 범위를 넓혔다. 이후 3CX가 정식으로 서명해 배포하던 데스크톱 앱 자체에 악성코드가 심어졌고, 이를 쓰던 전 세계 고객사들이 다시 피해를 입었다. 이 사건은 북한 연계 조직(UNC4736)의 소행으로 지목됐다.',
+      mechanism:'이 사건의 핵심은 신뢰의 연쇄다. 정상 업체 홈페이지에서, 정상처럼 보이는 서명된 설치 파일을 받았더니, 직원 PC가 감염되고, 사내 자격증명이 탈취되고, 빌드 서버 접근 권한으로 이어지고, 결국 정식 제품에 악성코드가 삽입되어 그 제품을 쓰는 모든 고객사가 감염되는 긴 사슬이 순서대로 무너졌다. 한 단계에서라도 서명의 출처, 로그인의 정당성을 다시 검증했다면 사슬을 끊을 수 있었다는 점에서 제로 트러스트와 다단계 검증의 중요성을 보여주는 사례로 자주 인용된다.',
+      vulnPattern:{label:'위험 신호 — 서명은 유효하지만 출처가 불필요한 설치 파일', code:'Get-AuthenticodeSignature X_TRADER_installer.exe | Format-List\n\n# Status : Valid   (서명 자체는 유효했다)\n# 그러나 업무와 무관한 소프트웨어를 굳이 지금 이 경로로\n# 받아야 하는지는 서명 유효성과는 별개의 질문이다'},
+      defenses:[
+        {label:'설치 파일 서명 + 해시 동시 검증', code:'$sig = Get-AuthenticodeSignature .\\installer.exe\n$hash = Get-FileHash .\\installer.exe -Algorithm SHA256\n\nif ($sig.Status -ne "Valid" -or $hash.Hash -ne $expectedHash) {\n    Write-Error "설치 중단: 서명 또는 해시 불일치"\n}'},
+        {label:'미승인 실행파일 차단 이력 조회', code:'Get-WinEvent -FilterHashtable @{LogName="Microsoft-Windows-CodeIntegrity/Operational"; Id=3076} |\n  Select-Object TimeCreated, Message'},
+      ]
+    }
+  },
+];
+
+// ---------- STATE ----------
+const state = {
+  screen:'title',
+  playerRole:null,
+  stageIndex:0,
+  round:1,
+  maxRounds:20,
+  infil:0,
+  detect:0,
+  log:[],
+  lastPlayerMove:null,
+  stagesWon:0,
+  locked:false,
+  hitSide:null,
+  lastResult:false,
+  score:0,
+  runStartTime:null,
+  elapsedSeconds:0,
+  nickname:'',
+  lbStatus:null,
+  difficulty:'normal',
+  pendingMoveId:null,
+  cmdError:'',
+  studyIndex:0,
+};
+let pendingTimeout = null;
+function clearPending(){ if(pendingTimeout){ clearTimeout(pendingTimeout); pendingTimeout=null; } }
+let aiTickTimer = null;
+function clearAiTicker(){ if(aiTickTimer){ clearTimeout(aiTickTimer); aiTickTimer=null; } }
+function formatTime(totalSeconds){
+  const t = Math.max(0, Math.floor(totalSeconds||0));
+  const m = Math.floor(t/60);
+  const s = t%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function esc(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function splitTemplate(tmpl){
+  const idx = tmpl.indexOf('____');
+  if(idx===-1) return [tmpl, ''];
+  return [tmpl.slice(0,idx), tmpl.slice(idx+4)];
+}
+function fillTemplate(tmpl, answer){
+  return tmpl.replace('____', answer);
+}
+function checkAnswer(input, answers){
+  const norm = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const u = norm(input);
+  if(!u) return false;
+  return answers.some(a => norm(a)===u);
+}
+
+function currentStage(){ return STAGES[state.stageIndex]; }
+
+// ---------- HELPERS ----------
+function el(html){
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+
+// ---------- PIXEL SPRITES ----------
+function drawHacker(canvas, hit){
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const s = 6;
+  const R = (x,y,w,h,c)=>{ ctx.fillStyle=c; ctx.fillRect(x*s,y*s,w*s,h*s); };
+  const glow = hit ? '#ffffff' : '#ff3860';
+  R(4,1,6,2,'#161b28');
+  R(3,3,8,2,'#161b28');
+  R(5,4,4,2,'#0a0d15');
+  R(5,5,1,1,glow);
+  R(8,5,1,1,glow);
+  R(3,6,8,7,'#1d2333');
+  R(2,7,1,5,'#12172a');
+  R(11,7,1,5,'#12172a');
+  R(4,11,6,2,'#0a0d15');
+  R(5,11,4,1,glow);
+}
+function drawDefender(canvas, hit){
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const s = 6;
+  const R = (x,y,w,h,c)=>{ ctx.fillStyle=c; ctx.fillRect(x*s,y*s,w*s,h*s); };
+  const glow = hit ? '#ffffff' : '#2ee6d6';
+  R(4,2,6,4,'#1c2436');
+  R(3,1,1,3,'#334063');
+  R(10,1,1,3,'#334063');
+  R(3,0,8,1,'#334063');
+  R(5,4,1,1,glow);
+  R(8,4,1,1,glow);
+  R(3,6,8,7,'#232c45');
+  R(2,7,1,5,'#1a2136');
+  R(11,7,1,5,'#1a2136');
+  R(4,11,6,2,'#0a0d15');
+  R(5,11,1,1,glow);
+  R(7,11,1,1,glow);
+  R(9,11,1,1,glow);
+}
+
+// ---------- GAME LOGIC ----------
+function resetRun(role){
+  clearPending();
+  state.playerRole = role;
+  state.stageIndex = 0;
+  state.stagesWon = 0;
+  state.score = 0;
+  state.runStartTime = Date.now();
+  goToStageIntro();
+}
+
+function goHome(){
+  clearPending();
+  clearAiTicker();
+  state.screen='title';
+  state.playerRole=null;
+  render();
+}
+
+function goBack(){
+  clearPending();
+  if(state.screen==='difficultySelect'){
+    state.screen='title'; render();
+  } else if(state.screen==='roleSelect'){
+    state.screen='difficultySelect'; render();
+  } else if(state.screen==='stageIntro'){
+    state.screen='roleSelect'; render();
+  } else if(state.screen==='battle'){
+    goToStageIntro();
+  } else if(state.screen==='stageResult'){
+    state.screen='roleSelect'; render();
+  } else if(state.screen==='gameResult'){
+    state.screen='title'; state.playerRole=null; render();
+  } else if(state.screen==='leaderboard'){
+    state.screen='title'; render();
+  } else if(state.screen==='studyMenu'){
+    state.screen='title'; render();
+  } else if(state.screen==='studyDetail'){
+    state.screen='studyMenu'; render();
+  }
+}
+
+function goToStageIntro(){
+  clearAiTicker();
+  state.screen='stageIntro';
+  state.round=1; state.infil=0; state.detect=0; state.log=[];
+  state.lastPlayerMove=null; state.locked=false; state.hitSide=null;
+  state.pendingMoveId=null; state.cmdError='';
+  render();
+}
+
+function startBattle(){
+  state.screen='battle';
+  render();
+  if(state.difficulty==='expert'){
+    scheduleAiTick();
+  }
+}
+
+function aiChoose(pool, counterTo){
+  if(counterTo && Math.random() < 0.5){
+    const stage = currentStage();
+    let best = pool[0], bestVal = -1;
+    for(const opt of pool){
+      let val;
+      if(state.playerRole==='attacker'){
+        val = stage.matchup[counterTo][opt.id];
+      } else {
+        val = 1 - stage.matchup[opt.id][counterTo];
+      }
+      if(val > bestVal){ bestVal = val; best = opt; }
+    }
+    return best;
+  }
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function playerPick(moveId, forcedFail){
+  if(state.locked) return;
+  state.locked = true;
+  state.pendingMoveId = null;
+  state.cmdError = '';
+  const stage = currentStage();
+  const playerIsAttacker = state.playerRole === 'attacker';
+  const playerPool = playerIsAttacker ? stage.attacks : stage.defenses;
+  const aiPool = playerIsAttacker ? stage.defenses : stage.attacks;
+  const playerMove = playerPool.find(m=>m.id===moveId);
+  const aiMove = aiChoose(aiPool, state.lastPlayerMove);
+
+  const attackMove = playerIsAttacker ? playerMove : aiMove;
+  const defenseMove = playerIsAttacker ? aiMove : playerMove;
+  let block = stage.matchup[attackMove.id][defenseMove.id];
+  if(forcedFail){ block = playerIsAttacker ? 0.9 : 0.1; }
+  const pct = Math.round(block*100);
+
+  const infilGain = Math.round(25*(1-block));
+  const detectGain = Math.round(25*block);
+  state.infil = Math.min(100, state.infil+infilGain);
+  state.detect = Math.min(100, state.detect+detectGain);
+
+  state.log.push({type:'move', text:'[R'+state.round+'] 해커: '+attackMove.name+' / 보안팀: '+defenseMove.name});
+  if(forcedFail){
+    state.log.push({type:'lose', text:'명령어 실행에 실패해 이번 라운드는 제대로 대응하지 못했습니다.'});
+  } else if(block>=0.6){
+    state.log.push({type:'win', text:'차단력 '+pct+'% — 보안팀이 효과적으로 방어했습니다. (+'+detectGain+' 탐지)'});
+  } else if(block<=0.4){
+    state.log.push({type:'lose', text:'차단력 '+pct+'% — 방어가 뚫렸습니다. (+'+infilGain+' 침투)'});
+  } else {
+    state.log.push({type:'move', text:'차단력 '+pct+'% — 절반의 성공. (+'+infilGain+' 침투 / +'+detectGain+' 탐지)'});
+  }
+  state.log.push({type:'tip', text:'💡 '+stage.tip});
+
+  state.lastPlayerMove = moveId;
+  state.hitSide = block>=0.5 ? 'red' : 'blue';
+  render();
+
+  pendingTimeout = setTimeout(()=>{
+    pendingTimeout = null;
+    if(state.infil>=100 || state.detect>=100 || state.round>=state.maxRounds){
+      state.hitSide=null;
+      endStage();
+    } else {
+      state.round++;
+      state.locked=false;
+      state.hitSide=null;
+      render();
+    }
+  }, 1400);
+}
+
+function endStage(){
+  let playerWon;
+  if(state.infil>=100 && state.detect>=100){
+    // both crossed 100 in the same update: infiltration reaching 100% is an
+    // unambiguous full compromise, so the attacker's side takes priority
+    playerWon = state.playerRole==='attacker';
+  } else if(state.infil>=100){
+    playerWon = state.playerRole==='attacker';
+  } else if(state.detect>=100){
+    playerWon = state.playerRole==='defender';
+  } else {
+    // safety-cap cutoff: neither reached 100, so compare who's ahead (defender favored on an exact tie)
+    playerWon = state.playerRole==='attacker' ? state.infil>state.detect : state.detect>=state.infil;
+  }
+  if(playerWon){
+    state.stagesWon++;
+    const mine = state.playerRole==='attacker' ? state.infil : state.detect;
+    const theirs = state.playerRole==='attacker' ? state.detect : state.infil;
+    const margin = Math.max(0, mine-theirs);
+    const base = 100 + Math.round(margin*0.5);
+    state.score += Math.round(base * (state.difficulty==='expert' ? 1.5 : 1));
+  }
+  state.lastResult = playerWon;
+  state.screen='stageResult';
+  render();
+}
+
+function nextStage(){
+  if(state.stageIndex < STAGES.length-1){
+    state.stageIndex++;
+    goToStageIntro();
+  } else {
+    state.elapsedSeconds = Math.round((Date.now()-state.runStartTime)/1000);
+    state.lbStatus = null;
+    state.screen='gameResult';
+    render();
+  }
+}
+
+function retryStage(){ goToStageIntro(); }
+
+// ---------- STORAGE ADAPTER: Claude.ai artifact storage → localStorage → in-memory ----------
+const memoryStore = {};
+function hasClaudeStorage(){ return typeof window.storage !== 'undefined'; }
+function hasLocalStorage(){
+  try{ const k='__scd_test__'; localStorage.setItem(k,'1'); localStorage.removeItem(k); return true; }
+  catch(e){ return false; }
+}
+const useLocalStorage = !hasClaudeStorage() && hasLocalStorage();
+function storageAvailable(){ return hasClaudeStorage() || useLocalStorage || true; }
+function storageIsShared(){ return hasClaudeStorage(); }
+function storageGet(key, shared){
+  if(hasClaudeStorage()) return window.storage.get(key, shared);
+  if(useLocalStorage){
+    try{
+      const raw = localStorage.getItem('scd:'+key);
+      return Promise.resolve(raw==null ? null : {key:key, value:raw, shared:!!shared});
+    } catch(e){ return Promise.reject(e); }
+  }
+  return Promise.resolve(Object.prototype.hasOwnProperty.call(memoryStore,key) ? {key:key, value:memoryStore[key], shared:!!shared} : null);
+}
+function storageSet(key, value, shared){
+  if(hasClaudeStorage()) return window.storage.set(key, value, shared);
+  if(useLocalStorage){
+    try{
+      localStorage.setItem('scd:'+key, value);
+      return Promise.resolve({key:key, value:value, shared:!!shared});
+    } catch(e){ return Promise.reject(e); }
+  }
+  memoryStore[key] = value;
+  return Promise.resolve({key:key, value:value, shared:!!shared});
+}
+
+// ---------- LEADERBOARD (persisted via storage adapter above) ----------
+const LB_KEY = 'leaderboard-entries';
+
+function loadLeaderboard(){
+  return storageGet(LB_KEY, true).then(function(res){
+    if(!res || !res.value) return [];
+    try{
+      const arr = JSON.parse(res.value);
+      return Array.isArray(arr) ? arr : [];
+    } catch(e){ return []; }
+  }).catch(function(){ return []; });
+}
+
+function saveLeaderboardEntry(entry){
+  return loadLeaderboard().then(function(list){
+    list.push(entry);
+    list.sort(function(a,b){ return (b.score-a.score) || (a.time-b.time); });
+    const trimmed = list.slice(0,50);
+    return storageSet(LB_KEY, JSON.stringify(trimmed), true);
+  }).then(function(res){ return !!res; }).catch(function(){ return false; });
+}
+
+function initNickname(){
+  storageGet('my-nickname', false).then(function(res){
+    if(res && res.value) state.nickname = res.value;
+  }).catch(function(){});
+}
+
+// ---------- RENDER ----------
+function render(){
+  const screenEl = document.getElementById('screen');
+  const stageActive = state.screen==='battle' || state.screen==='stageIntro' || state.screen==='stageResult';
+  let centerLabel = 'SUPPLY_CHAIN.exe';
+  if(stageActive){
+    centerLabel = 'STAGE '+String(state.stageIndex+1).padStart(2,'0')+'/'+String(STAGES.length).padStart(2,'0');
+    if(state.playerRole) centerLabel += ' · '+(state.playerRole==='attacker'?'해커':'보안팀');
+    if(state.difficulty==='expert') centerLabel += ' · EXP';
+  } else if(state.screen==='gameResult'){
+    centerLabel = 'RESULT'+(state.playerRole ? ' · '+(state.playerRole==='attacker'?'해커':'보안팀') : '');
+  } else if(state.screen==='leaderboard'){
+    centerLabel = 'LEADERBOARD';
+  } else if(state.screen==='studyMenu' || state.screen==='studyDetail'){
+    centerLabel = 'STUDY';
+  } else if(state.screen==='difficultySelect'){
+    centerLabel = 'SUPPLY_CHAIN.exe';
+  }
+  document.getElementById('topbarCenter').textContent = centerLabel;
+  document.getElementById('backBtn').disabled = (state.screen==='title');
+
+  screenEl.innerHTML='';
+  if(state.screen==='title') screenEl.appendChild(renderTitle());
+  else if(state.screen==='difficultySelect') screenEl.appendChild(renderDifficultySelect());
+  else if(state.screen==='roleSelect') screenEl.appendChild(renderRoleSelect());
+  else if(state.screen==='stageIntro') screenEl.appendChild(renderStageIntro());
+  else if(state.screen==='battle') screenEl.appendChild(state.difficulty==='expert' ? renderBattleRealtime() : renderBattle());
+  else if(state.screen==='stageResult') screenEl.appendChild(renderStageResult());
+  else if(state.screen==='gameResult') screenEl.appendChild(renderGameResult());
+  else if(state.screen==='leaderboard') screenEl.appendChild(renderLeaderboard());
+  else if(state.screen==='studyMenu') screenEl.appendChild(renderStudyMenu());
+  else if(state.screen==='studyDetail') screenEl.appendChild(renderStudyDetail());
+}
+
+function renderTitle(){
+  const wrap = el(
+    '<div>'+
+      '<div class="pixel-title">공급망<br>디펜스</div>'+
+      '<div class="subtitle">SUPPLY CHAIN: RED VS BLUE</div>'+
+      '<p class="lead">해커가 되어 공급망을 침투하거나, 보안팀이 되어 신뢰 체인을 지켜라.<br>4개 스테이지는 모두 실제 있었던 공급망 공격 사례를 바탕으로 한다.</p>'+
+      '<div class="btn-row">'+
+        '<button class="btn" id="startBtn">시작하기 ▶</button>'+
+        '<button class="btn ghost" id="studyBtn">📚 공부하기</button>'+
+        '<button class="btn ghost" id="lbBtn">🏆 리더보드</button>'+
+      '</div>'+
+    '</div>'
+  );
+  wrap.querySelector('#startBtn').addEventListener('click', ()=>{ state.screen='difficultySelect'; render(); });
+  wrap.querySelector('#studyBtn').addEventListener('click', ()=>{ state.screen='studyMenu'; render(); });
+  wrap.querySelector('#lbBtn').addEventListener('click', ()=>{ state.screen='leaderboard'; render(); });
+  return wrap;
+}
+
+function renderStudyMenu(){
+  const wrap = el(
+    '<div>'+
+      '<div class="pixel-title" style="font-size:14px;">공부하기</div>'+
+      '<p class="lead">스테이지를 선택하면 실제 사례, 공격 원리, 방어 코드를 확인할 수 있습니다.</p>'+
+      '<div id="studyList"></div>'+
+    '</div>'
+  );
+  const list = wrap.querySelector('#studyList');
+  STAGES.forEach((stage, i)=>{
+    const item = el(
+      '<button class="study-list-item">'+
+        '<div class="sl-code">'+stage.code+'</div>'+
+        '<div class="sl-name">'+stage.name+'</div>'+
+      '</button>'
+    );
+    item.addEventListener('click', ()=>{ state.studyIndex=i; state.screen='studyDetail'; render(); });
+    list.appendChild(item);
+  });
+  return wrap;
+}
+
+function renderStudyDetail(){
+  const stage = STAGES[state.studyIndex];
+  const s = stage.study;
+  let html = '<div>'+
+    '<div class="pixel-title" style="font-size:13px;">'+esc(stage.name)+'</div>'+
+    '<div class="subtitle">'+esc(stage.code)+'</div>'+
+    '<div class="study-section"><div class="study-h">📰 '+esc(s.caseTitle)+'</div><div class="study-body">'+esc(s.caseBody)+'</div></div>'+
+    '<div class="study-section"><div class="study-h">⚙ 공격 원리</div><div class="study-body">'+esc(s.mechanism)+'</div></div>';
+
+  if(s.vulnPattern){
+    html += '<div class="study-section"><div class="study-h">🚩 위험 패턴 (참고용 · 실행 금지)</div>'+
+      '<div class="code-block vuln"><div class="code-label">'+esc(s.vulnPattern.label)+'</div><pre>'+esc(s.vulnPattern.code)+'</pre></div></div>';
+  }
+
+  html += '<div class="study-section"><div class="study-h">🛡 방어 코드</div>';
+  s.defenses.forEach(d=>{
+    html += '<div class="code-block"><div class="code-label">'+esc(d.label)+'</div><pre>'+esc(d.code)+'</pre></div>';
+  });
+  html += '</div>';
+  html += '<div class="btn-row"><button class="btn ghost" id="studyBackBtn">목록으로</button></div>';
+  html += '</div>';
+
+  const wrap = el(html);
+  wrap.querySelector('#studyBackBtn').addEventListener('click', ()=>{ state.screen='studyMenu'; render(); });
+  return wrap;
+}
+
+function renderDifficultySelect(){
+  const wrap = el(
+    '<div>'+
+      '<div class="pixel-title" style="font-size:14px;">난이도를 선택하라</div>'+
+      '<div class="role-grid">'+
+        '<button class="role-card blue" id="pickNormal">'+
+          '<h3>일반인</h3>'+
+          '<p>미리 준비된 기술 목록에서 골라 사용한다.</p>'+
+        '</button>'+
+        '<button class="role-card red" id="pickExpert">'+
+          '<h3>전문가</h3>'+
+          '<p>실제와 동일한 명령어를 직접 입력해야 기술이 발동한다. 턴 없이 AI가 실시간으로 계속 움직인다.</p>'+
+        '</button>'+
+      '</div>'+
+    '</div>'
+  );
+  wrap.querySelector('#pickNormal').addEventListener('click', ()=>{ state.difficulty='normal'; state.screen='roleSelect'; render(); });
+  wrap.querySelector('#pickExpert').addEventListener('click', ()=>{ state.difficulty='expert'; state.screen='roleSelect'; render(); });
+  return wrap;
+}
+
+function renderRoleSelect(){
+  const wrap = el(
+    '<div>'+
+      '<div class="pixel-title" style="font-size:14px;">역할을 선택하라</div>'+
+      '<div class="subtitle" style="margin-bottom:16px;">난이도: '+(state.difficulty==='expert'?'전문가':'일반인')+'</div>'+
+      '<div class="role-grid">'+
+        '<button class="role-card red" id="pickAttacker">'+
+          '<canvas class="sprite" width="96" height="96"></canvas>'+
+          '<h3>해커 (RED)</h3>'+
+          '<p>공급망의 약점을 파고들어 침투하라.</p>'+
+        '</button>'+
+        '<button class="role-card blue" id="pickDefender">'+
+          '<canvas class="sprite" width="96" height="96"></canvas>'+
+          '<h3>보안팀 (BLUE)</h3>'+
+          '<p>신뢰 체인을 지키고 공격을 막아내라.</p>'+
+        '</button>'+
+      '</div>'+
+    '</div>'
+  );
+  drawHacker(wrap.querySelector('#pickAttacker canvas'), false);
+  drawDefender(wrap.querySelector('#pickDefender canvas'), false);
+  wrap.querySelector('#pickAttacker').addEventListener('click', ()=>resetRun('attacker'));
+  wrap.querySelector('#pickDefender').addEventListener('click', ()=>resetRun('defender'));
+  return wrap;
+}
+
+function renderStageIntro(){
+  const stage = currentStage();
+  const expertNote = state.difficulty==='expert'
+    ? '<div class="case-box"><b>⚡ EXPERT ▸</b> 시작하면 상대 AI가 스스로 계속 공격·방어를 시도합니다. 기술을 고르고 명령어를 빠르고 정확하게 입력해 맞서세요.</div>'
+    : '';
+  const wrap = el(
+    '<div>'+
+      '<div class="pixel-title" style="font-size:13px;">STAGE '+String(state.stageIndex+1).padStart(2,'0')+'</div>'+
+      '<div class="subtitle">'+stage.code+'</div>'+
+      '<h2 style="text-align:center;font-family:var(--font-mono);font-size:16px;margin:0 0 14px;">'+stage.name+'</h2>'+
+      '<div class="case-box"><b>REAL CASE ▸</b> '+stage.caseNote+'</div>'+
+      expertNote+
+      '<button class="btn" id="goBattle">전투 시작 ▶</button>'+
+    '</div>'
+  );
+  wrap.querySelector('#goBattle').addEventListener('click', startBattle);
+  return wrap;
+}
+
+function renderBattle(){
+  const stage = currentStage();
+  const playerIsAttacker = state.playerRole==='attacker';
+  const pool = playerIsAttacker ? stage.attacks : stage.defenses;
+
+  const wrap = el(
+    '<div>'+
+      '<div class="battle-top">'+
+        '<div class="fighter red'+(state.hitSide==='red'?' hit':'')+'"><canvas class="sprite" width="96" height="96"></canvas><div class="label">해커</div></div>'+
+        '<div class="vs">VS</div>'+
+        '<div class="fighter blue'+(state.hitSide==='blue'?' hit':'')+'"><canvas class="sprite" width="96" height="96"></canvas><div class="label">보안팀</div></div>'+
+      '</div>'+
+      '<div class="meter-row">'+
+        '<div class="meter-label"><span>침투도</span><span>'+state.infil+'%</span></div>'+
+        '<div class="meter"><div class="meter-fill red" style="width:'+state.infil+'%"></div></div>'+
+      '</div>'+
+      '<div class="meter-row">'+
+        '<div class="meter-label"><span>탐지도</span><span>'+state.detect+'%</span></div>'+
+        '<div class="meter"><div class="meter-fill blue" style="width:'+state.detect+'%"></div></div>'+
+      '</div>'+
+      '<div class="prompt">'+(playerIsAttacker?'침투 기술을 선택하세요':'방어 기술을 선택하세요')+'</div>'+
+      '<div class="moves" id="moveList"></div>'+
+      '<div class="log" id="logBox"></div>'+
+    '</div>'
+  );
+
+  drawHacker(wrap.querySelector('.fighter.red canvas'), state.hitSide==='red');
+  drawDefender(wrap.querySelector('.fighter.blue canvas'), state.hitSide==='blue');
+
+  const moveList = wrap.querySelector('#moveList');
+  pool.forEach(mv=>{
+    const example = fillTemplate(mv.cmd.tmpl, mv.cmd.ans[0]);
+    const card = el(
+      '<button class="move-card" '+(state.locked?'disabled':'')+'>'+
+        '<div class="mv-name">'+mv.name+'</div>'+
+        '<div class="mv-desc">'+mv.desc+'</div>'+
+        '<div class="mv-code">$ '+esc(example)+'</div>'+
+      '</button>'
+    );
+    card.addEventListener('click', ()=>playerPick(mv.id));
+    moveList.appendChild(card);
+  });
+
+  const logBox = wrap.querySelector('#logBox');
+  state.log.forEach(l=>{
+    const line = document.createElement('div');
+    line.className = l.type;
+    const linePrefix = l.type==='win' ? '✔ ' : (l.type==='lose' ? '✖ ' : '');
+    line.textContent = linePrefix + l.text;
+    logBox.appendChild(line);
+  });
+  logBox.scrollTop = logBox.scrollHeight;
+
+  return wrap;
+}
+
+// ---------- REAL-TIME BATTLE (expert difficulty): AI acts on its own clock; the
+// player must pick + correctly type a command at any time to push back. No turns. ----------
+function scheduleAiTick(){
+  clearAiTicker();
+  const delay = 3500 + Math.random()*2000;
+  aiTickTimer = setTimeout(runAiTick, delay);
+}
+
+function runAiTick(){
+  aiTickTimer = null;
+  if(state.screen!=='battle' || state.difficulty!=='expert') return;
+  const stage = currentStage();
+  const playerIsAttacker = state.playerRole==='attacker';
+  const aiPool = playerIsAttacker ? stage.defenses : stage.attacks;
+  const move = aiPool[Math.floor(Math.random()*aiPool.length)];
+  const amount = 6 + Math.floor(Math.random()*5);
+  applyRealtimeProgress(playerIsAttacker ? 'detect' : 'infil', amount, false, move.name);
+  if(!checkRealtimeEnd()) scheduleAiTick();
+}
+
+function playerRealtimeSuccess(mv){
+  const playerIsAttacker = state.playerRole==='attacker';
+  const amount = 16 + Math.floor(Math.random()*7);
+  state.pendingMoveId = null;
+  state.cmdError = '';
+  applyRealtimeProgress(playerIsAttacker ? 'infil' : 'detect', amount, true, mv.name);
+  if(!checkRealtimeEnd()){
+    const area = document.getElementById('rtMoveArea');
+    if(area) fillRealtimeMoveArea(area);
+  }
+}
+
+function applyRealtimeProgress(meterKey, amount, isPlayer, moveName){
+  state[meterKey] = Math.min(100, state[meterKey] + amount);
+  const fillEl = document.getElementById(meterKey==='infil' ? 'meterInfilFill' : 'meterDetectFill');
+  const pctEl = document.getElementById(meterKey==='infil' ? 'meterInfilPct' : 'meterDetectPct');
+  if(fillEl) fillEl.style.width = state[meterKey]+'%';
+  if(pctEl) pctEl.textContent = state[meterKey]+'%';
+
+  const roleIsAttacker = state.playerRole==='attacker';
+  let actor;
+  if(isPlayer){ actor = roleIsAttacker ? '플레이어(해커)' : '플레이어(보안팀)'; }
+  else { actor = roleIsAttacker ? '보안팀 AI' : '해커 AI'; }
+  const kind = meterKey==='infil' ? '침투' : '탐지';
+  const entry = { type: isPlayer?'win':'move', text: actor+': '+moveName+' (+'+amount+' '+kind+')' };
+  state.log.push(entry);
+
+  const logBox = document.getElementById('rtLog');
+  if(logBox){
+    const line = document.createElement('div');
+    line.className = entry.type;
+    line.textContent = (isPlayer?'✔ ':'▸ ') + entry.text;
+    logBox.appendChild(line);
+    logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  const flashId = meterKey==='infil' ? 'rtFighterRed' : 'rtFighterBlue';
+  const fighterEl = document.getElementById(flashId);
+  if(fighterEl){
+    fighterEl.classList.remove('hit');
+    void fighterEl.offsetWidth;
+    fighterEl.classList.add('hit');
+  }
+}
+
+function checkRealtimeEnd(){
+  if(state.infil>=100 || state.detect>=100){
+    clearAiTicker();
+    endStage();
+    return true;
+  }
+  return false;
+}
+
+function fillRealtimeMoveArea(container){
+  container.innerHTML = '';
+  const stage = currentStage();
+  const playerIsAttacker = state.playerRole==='attacker';
+  const pool = playerIsAttacker ? stage.attacks : stage.defenses;
+
+  if(state.pendingMoveId){
+    const mv = pool.find(m=>m.id===state.pendingMoveId);
+    const parts = splitTemplate(mv.cmd.tmpl);
+    const panel = el(
+      '<div class="cmd-panel">'+
+        '<div class="cmd-prompt"><b>'+esc(mv.name)+'</b> — '+esc(mv.cmd.prompt)+'</div>'+
+        '<div class="cmd-line">'+
+          '<span class="cmd-tmpl">'+esc(parts[0])+'</span>'+
+          '<input class="cmd-input-inline" id="cmdInput" autocomplete="off" autocapitalize="off" spellcheck="false">'+
+          '<span class="cmd-tmpl">'+esc(parts[1])+'</span>'+
+        '</div>'+
+        '<div class="cmd-feedback" id="cmdFeedback"></div>'+
+        '<div class="btn-row">'+
+          '<button class="btn" id="cmdSubmit">실행 ▶</button>'+
+          '<button class="btn ghost" id="cmdBack">다른 기술로</button>'+
+        '</div>'+
+      '</div>'
+    );
+    const input = panel.querySelector('#cmdInput');
+    const feedback = panel.querySelector('#cmdFeedback');
+    const doCheck = ()=>{
+      if(checkAnswer(input.value, mv.cmd.ans)){
+        playerRealtimeSuccess(mv);
+      } else {
+        state.cmdError = '명령어가 올바르지 않습니다. 다시 시도하세요.';
+        feedback.textContent = state.cmdError;
+        feedback.classList.add('err');
+        input.value = '';
+        input.focus();
+      }
+    };
+    panel.querySelector('#cmdSubmit').addEventListener('click', doCheck);
+    input.addEventListener('keydown', function(ev){ if(ev.key==='Enter') doCheck(); });
+    panel.querySelector('#cmdBack').addEventListener('click', ()=>{
+      state.pendingMoveId=null; state.cmdError='';
+      fillRealtimeMoveArea(container);
+    });
+    container.appendChild(panel);
+    setTimeout(function(){ input.focus(); }, 0);
+  } else {
+    const moveList = el('<div class="moves"></div>');
+    pool.forEach(mv=>{
+      const card = el(
+        '<button class="move-card">'+
+          '<div class="mv-name">'+mv.name+'</div>'+
+          '<div class="mv-desc">'+mv.desc+'</div>'+
+        '</button>'
+      );
+      card.addEventListener('click', ()=>{
+        state.pendingMoveId = mv.id;
+        state.cmdError = '';
+        fillRealtimeMoveArea(container);
+      });
+      moveList.appendChild(card);
+    });
+    container.appendChild(moveList);
+  }
+}
+
+function renderBattleRealtime(){
+  const wrap = el(
+    '<div>'+
+      '<div class="battle-top">'+
+        '<div class="fighter red" id="rtFighterRed"><canvas class="sprite" width="96" height="96"></canvas><div class="label">해커</div></div>'+
+        '<div class="vs">VS</div>'+
+        '<div class="fighter blue" id="rtFighterBlue"><canvas class="sprite" width="96" height="96"></canvas><div class="label">보안팀</div></div>'+
+      '</div>'+
+      '<div class="meter-row">'+
+        '<div class="meter-label"><span>침투도</span><span id="meterInfilPct">'+state.infil+'%</span></div>'+
+        '<div class="meter"><div class="meter-fill red" id="meterInfilFill" style="width:'+state.infil+'%"></div></div>'+
+      '</div>'+
+      '<div class="meter-row">'+
+        '<div class="meter-label"><span>탐지도</span><span id="meterDetectPct">'+state.detect+'%</span></div>'+
+        '<div class="meter"><div class="meter-fill blue" id="meterDetectFill" style="width:'+state.detect+'%"></div></div>'+
+      '</div>'+
+      '<div class="rt-indicator"><span class="rt-dot"></span>실시간 전투 진행 중 — 상대 AI가 스스로 계속 움직입니다</div>'+
+      '<div id="rtMoveArea"></div>'+
+      '<div class="log" id="rtLog"></div>'+
+    '</div>'
+  );
+
+  drawHacker(wrap.querySelector('#rtFighterRed canvas'), false);
+  drawDefender(wrap.querySelector('#rtFighterBlue canvas'), false);
+
+  fillRealtimeMoveArea(wrap.querySelector('#rtMoveArea'));
+
+  const logBox = wrap.querySelector('#rtLog');
+  state.log.forEach(l=>{
+    const line = document.createElement('div');
+    line.className = l.type;
+    const linePrefix = l.type==='win' ? '✔ ' : (l.type==='lose' ? '✖ ' : '▸ ');
+    line.textContent = linePrefix + l.text;
+    logBox.appendChild(line);
+  });
+  logBox.scrollTop = logBox.scrollHeight;
+
+  return wrap;
+}
+
+function renderStageResult(){
+  const won = state.lastResult;
+  const stage = currentStage();
+  const wrap = el(
+    '<div>'+
+      '<div class="result-banner '+(won?'win':'lose')+'">'+(won?'STAGE CLEAR':'STAGE FAILED')+'</div>'+
+      '<p class="lead">'+(won?'이번 스테이지에서 우위를 점했습니다.':'이번 스테이지에서 상대가 우위를 점했습니다.')+' (침투 '+state.infil+'% · 탐지 '+state.detect+'%)</p>'+
+      '<div class="stat-row"><div><span class="n">'+state.score+'</span>누적 점수</div></div>'+
+      '<div class="case-box"><b>TIP ▸</b> '+stage.tip+'</div>'+
+      '<div class="btn-row">'+
+        '<button class="btn" id="nextBtn">'+(state.stageIndex<STAGES.length-1?'다음 스테이지 ▶':'최종 결과 보기 ▶')+'</button>'+
+        '<button class="btn ghost" id="retryBtn">이 스테이지 다시하기</button>'+
+      '</div>'+
+    '</div>'
+  );
+  wrap.querySelector('#nextBtn').addEventListener('click', nextStage);
+  wrap.querySelector('#retryBtn').addEventListener('click', retryStage);
+  return wrap;
+}
+
+function renderGameResult(){
+  const roleLabel = state.playerRole==='attacker' ? '해커' : '보안팀';
+  const otherRole = state.playerRole==='attacker' ? 'defender' : 'attacker';
+  const otherLabel = otherRole==='defender' ? '보안팀' : '해커';
+  const saved = state.lbStatus === 'saved';
+
+  const submitBlock = saved
+    ? '<p class="lb-msg ok">✔ "'+esc(state.nickname)+'" 기록이 리더보드에 등록되었습니다.</p>'
+    : (
+        '<div class="input-row"><input class="text-input" id="nickInput" maxlength="10" placeholder="닉네임 (최대 10자)" value="'+esc(state.nickname||'')+'"></div>'+
+        '<button class="btn" id="submitLbBtn">리더보드에 등록 ▶</button>'+
+        (state.lbStatus==='error' ? '<p class="lb-msg err">등록에 실패했습니다. 이 브라우저에서는 저장 기능이 제한되어 있을 수 있습니다.</p>' : '')
+      );
+
+  const wrap = el(
+    '<div>'+
+      '<div class="pixel-title" style="font-size:15px;">RUN COMPLETE</div>'+
+      '<p class="lead">'+roleLabel+'(플레이어)로 '+STAGES.length+'개 스테이지 중 '+state.stagesWon+'개를 승리했습니다. (난이도: '+(state.difficulty==='expert'?'전문가':'일반인')+')</p>'+
+      '<div class="stat-row">'+
+        '<div><span class="n">'+state.score+'</span>SCORE</div>'+
+        '<div><span class="n">'+formatTime(state.elapsedSeconds)+'</span>TIME</div>'+
+        '<div><span class="n">'+state.stagesWon+'/'+STAGES.length+'</span>WINS</div>'+
+      '</div>'+
+      submitBlock+
+      '<div class="btn-row" style="margin-top:14px;">'+
+        '<button class="btn ghost" id="viewLbBtn">리더보드 보기</button>'+
+        '<button class="btn ghost" id="switchBtn">'+otherLabel+'으로 다시 플레이</button>'+
+        '<button class="btn ghost" id="titleBtn">처음으로</button>'+
+      '</div>'+
+    '</div>'
+  );
+
+  if(!saved){
+    const input = wrap.querySelector('#nickInput');
+    const submitBtn = wrap.querySelector('#submitLbBtn');
+    const doSubmit = ()=>{
+      const nickname = (input.value||'').trim().slice(0,10) || '익명';
+      state.nickname = nickname;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '등록 중...';
+      const entry = { nickname:nickname, score:state.score, time:state.elapsedSeconds, role:state.playerRole, difficulty:state.difficulty, date:new Date().toISOString() };
+      saveLeaderboardEntry(entry).then(function(ok){
+        storageSet('my-nickname', nickname, false).catch(function(){});
+        state.lbStatus = ok ? 'saved' : 'error';
+        render();
+      });
+    };
+    submitBtn.addEventListener('click', doSubmit);
+    input.addEventListener('keydown', function(ev){ if(ev.key==='Enter'){ doSubmit(); } });
+  }
+  wrap.querySelector('#viewLbBtn').addEventListener('click', ()=>{ state.screen='leaderboard'; render(); });
+  wrap.querySelector('#switchBtn').addEventListener('click', ()=>resetRun(otherRole));
+  wrap.querySelector('#titleBtn').addEventListener('click', ()=>{ state.screen='title'; state.playerRole=null; render(); });
+  return wrap;
+}
+
+function renderLeaderboard(){
+  const scopeNote = storageIsShared()
+    ? '이 아티팩트를 여는 모든 사용자와 공유되는 기록입니다.'
+    : '이 기기(브라우저)에 저장되는 개인 기록입니다.';
+  const wrap = el(
+    '<div>'+
+      '<div class="pixel-title" style="font-size:15px;">🏆 리더보드</div>'+
+      '<p class="lead" style="margin-bottom:14px;">'+scopeNote+'</p>'+
+      '<div class="lb-list" id="lbList"><div class="lb-empty">불러오는 중...</div></div>'+
+      '<div class="btn-row" style="margin-top:16px;">'+
+        '<button class="btn ghost" id="lbBackBtn">돌아가기</button>'+
+      '</div>'+
+    '</div>'
+  );
+  wrap.querySelector('#lbBackBtn').addEventListener('click', ()=>{ state.screen='title'; render(); });
+
+  loadLeaderboard().then(function(entries){
+    const list = wrap.querySelector('#lbList');
+    if(!list) return;
+    list.innerHTML = '';
+    if(!storageAvailable()){
+      list.appendChild(el('<div class="lb-empty">이 환경에서는 리더보드를 사용할 수 없습니다.</div>'));
+      return;
+    }
+    if(entries.length===0){
+      list.appendChild(el('<div class="lb-empty">아직 기록이 없습니다. 첫 기록을 남겨보세요!</div>'));
+      return;
+    }
+    entries.sort(function(a,b){ return (b.score-a.score) || (a.time-b.time); });
+    entries.forEach(function(e,i){
+      const row = document.createElement('div');
+      row.className = 'lb-row';
+      const rank = document.createElement('div');
+      rank.className = 'lb-rank';
+      rank.textContent = '#'+(i+1);
+      const nick = document.createElement('div');
+      nick.className = 'lb-nick';
+      nick.textContent = e.nickname || '???';
+      const roleTag = document.createElement('div');
+      roleTag.className = 'lb-role-tag ' + (e.role==='attacker' ? 'red' : 'blue');
+      roleTag.textContent = (e.role==='attacker' ? 'RED' : 'BLUE') + (e.difficulty==='expert' ? '·EXP' : '');
+      const score = document.createElement('div');
+      score.className = 'lb-score';
+      score.textContent = String(e.score);
+      const time = document.createElement('div');
+      time.className = 'lb-time';
+      time.textContent = formatTime(e.time);
+      row.appendChild(rank);
+      row.appendChild(nick);
+      row.appendChild(roleTag);
+      row.appendChild(score);
+      row.appendChild(time);
+      list.appendChild(row);
+    });
+  });
+
+  return wrap;
+}
+
+document.getElementById('homeBtn').addEventListener('click', goHome);
+document.getElementById('backBtn').addEventListener('click', goBack);
+initNickname();
+render();
+</script>
+</body>
+</html>
